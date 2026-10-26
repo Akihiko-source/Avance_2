@@ -1,0 +1,11 @@
+{
+  "name": "ms-carrito",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/server.js",
+  "scripts": { "start": "node src/server.js", "build": "rm -rf dist && mkdir -p dist && cp -r src/. dist/" },
+  "dependencies": {
+    "express": "^4.21.0",
+    "redis": "^4.7.0"
+  }
+}

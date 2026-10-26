@@ -1,0 +1,101 @@
+# Nube (VMs, imágenes desde ECR):  docker compose pull && docker compose up -d
+# Local (construye las imágenes):   docker compose --profile local up -d --build
+
+x-app-env: &app-env
+  DB_HOST: ${DB_HOST}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+  DB_SSL: ${DB_SSL:-require}
+  AWS_REGION: ${AWS_REGION:-us-east-1}
+
+services:
+  gateway:
+    image: ${REGISTRY:-local}/retail-gateway:${TAG:-dev}
+    build: ./gateway
+    ports: ["8080:8080"]
+    depends_on:
+      catalogo: { condition: service_healthy }
+      carrito:  { condition: service_healthy }
+      ordenes:  { condition: service_healthy }
+      pagos:    { condition: service_healthy }
+    restart: unless-stopped
+    networks: [retail-net]
+
+  catalogo:
+    image: ${REGISTRY:-local}/ms-catalogo:${TAG:-dev}
+    build: ./services/catalogo
+    environment:
+      <<: *app-env
+      PORT: 3000
+      DB_NAME: catalogo
+      S3_BUCKET: ${S3_BUCKET:-}
+    restart: unless-stopped
+    networks: [retail-net]
+
+  carrito:
+    image: ${REGISTRY:-local}/ms-carrito:${TAG:-dev}
+    build: ./services/carrito
+    environment:
+      PORT: 3001
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [retail-net]
+
+  ordenes:
+    image: ${REGISTRY:-local}/ms-ordenes:${TAG:-dev}
+    build: ./services/ordenes
+    environment:
+      <<: *app-env
+      PORT: 3002
+      DB_NAME: ordenes
+      PAGOS_URL: http://pagos:3003
+    restart: unless-stopped
+    networks: [retail-net]
+
+  pagos:
+    image: ${REGISTRY:-local}/ms-pagos:${TAG:-dev}
+    build: ./services/pagos
+    environment:
+      <<: *app-env
+      PORT: 3003
+      DB_NAME: pagos
+    restart: unless-stopped
+    networks: [retail-net]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks: [retail-net]
+
+  postgres:            # solo desarrollo local; en la nube se usa RDS
+    image: postgres:16-alpine
+    profiles: ["local"]
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [retail-net]
+
+networks:
+  retail-net:
+
+volumes:
+  redis-data:
+  pg-data:

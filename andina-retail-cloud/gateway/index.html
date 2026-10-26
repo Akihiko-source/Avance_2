@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Andina Retail – Tienda en línea</title>
+<style>
+  :root { --bg:#f5f6fa; --card:#fff; --ink:#1d2433; --muted:#6b7385; --brand:#d6336c; --brand-d:#b02558;
+          --ok:#198754; --warn:#b7791f; --bad:#c0392b; --line:#e3e6ee; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--ink); color:#fff; position:sticky; top:0; z-index:5; }
+  .bar { max-width:1100px; margin:auto; padding:12px 16px; display:flex; align-items:center; gap:16px; }
+  .logo { font-weight:800; font-size:20px; letter-spacing:.3px; }
+  .logo span { color:#ff7aa8; }
+  nav { margin-left:auto; display:flex; gap:8px; }
+  nav button { background:transparent; color:#fff; border:1px solid #ffffff55; padding:8px 14px; border-radius:20px; cursor:pointer; font-size:14px; }
+  nav button.active, nav button:hover { background:var(--brand); border-color:var(--brand); }
+  .badge { background:#fff; color:var(--brand); border-radius:10px; padding:0 7px; margin-left:6px; font-weight:700; font-size:12px; }
+  main { max-width:1100px; margin:auto; padding:20px 16px 60px; }
+  .hero { background:linear-gradient(120deg,var(--brand),#7048e8); color:#fff; border-radius:14px; padding:22px 24px; margin-bottom:20px; }
+  .hero h1 { margin:0 0 4px; font-size:24px; } .hero p { margin:0; opacity:.9; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .chip { border:1px solid var(--line); background:var(--card); padding:7px 14px; border-radius:20px; cursor:pointer; font-size:14px; }
+  .chip.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+  .prod { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:6px; }
+  .prod .pic { font-size:54px; text-align:center; background:var(--bg); border-radius:10px; padding:14px 0; }
+  .prod h3 { margin:6px 0 0; font-size:16px; }
+  .cat { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .price { font-size:20px; font-weight:800; }
+  .stock { font-size:12px; color:var(--muted); }
+  .btn { background:var(--brand); color:#fff; border:0; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; }
+  .btn:hover { background:var(--brand-d); } .btn:disabled { background:#bbb; cursor:not-allowed; }
+  .btn.sec { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .btn.sm { padding:5px 10px; font-size:13px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; }
+  table { width:100%; border-collapse:collapse; } th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); font-size:14px; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
+  td.num, th.num { text-align:right; }
+  .total { display:flex; justify-content:space-between; align-items:center; margin-top:16px; font-size:20px; font-weight:800; }
+  .state { padding:3px 10px; border-radius:12px; font-size:12px; font-weight:700; }
+  .PAGADA { background:#d1e7dd; color:var(--ok); } .PAGO_FALLIDO { background:#f8d7da; color:var(--bad); }
+  .PENDIENTE { background:#fff3cd; color:var(--warn); }
+  .empty { text-align:center; color:var(--muted); padding:36px 0; }
+  .status { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  .dot { display:inline-flex; align-items:center; gap:6px; font-size:13px; background:var(--card); border:1px solid var(--line); padding:6px 12px; border-radius:16px; }
+  .dot i { width:9px; height:9px; border-radius:50%; background:#bbb; display:inline-block; }
+  .dot i.up { background:var(--ok); } .dot i.down { background:var(--bad); }
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:12px 20px; border-radius:10px; opacity:0; transition:.25s; pointer-events:none; z-index:10; }
+  #toast.show { opacity:1; }
+  .hidden { display:none; }
+  .qty { display:inline-flex; align-items:center; gap:8px; }
+  form.new { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:12px; }
+  form.new input { padding:9px; border:1px solid var(--line); border-radius:8px; font-size:14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo">Andina<span>Retail</span></div>
+    <nav>
+      <button id="nav-tienda" class="active" onclick="show('tienda')">Tienda</button>
+      <button id="nav-carrito" onclick="show('carrito')">Carrito<span class="badge" id="cnt">0</span></button>
+      <button id="nav-ordenes" onclick="show('ordenes')">Mis órdenes</button>
+      <button id="nav-admin" onclick="show('admin')">Estado</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- TIENDA -->
+  <section id="tienda">
+    <div class="hero"><h1>Cyber Days Andina Retail</h1><p>Plataforma de microservicios en contenedores · Catálogo, Carrito, Órdenes y Pagos</p></div>
+    <div class="filters" id="filtros"></div>
+    <div class="grid" id="productos"></div>
+  </section>
+
+  <!-- CARRITO -->
+  <section id="carrito" class="hidden">
+    <div class="panel">
+      <h2 style="margin-top:0">Tu carrito</h2>
+      <div id="carrito-body"></div>
+    </div>
+  </section>
+
+  <!-- ORDENES -->
+  <section id="ordenes" class="hidden">
+    <div class="panel">
+      <h2 style="margin-top:0">Historial de órdenes</h2>
+      <div id="ordenes-body"></div>
+    </div>
+  </section>
+
+  <!-- ESTADO / ADMIN -->
+  <section id="admin" class="hidden">
+    <div class="panel">
+      <h2 style="margin-top:0">Estado de los servicios</h2>
+      <div class="status" id="estado"></div>
+      <p style="color:var(--muted);font-size:13px">Consulta el endpoint <code>/health</code> de cada microservicio a través del gateway.</p>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2 style="margin-top:0">Agregar producto</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0">Útil para la prueba de persistencia (V04): crea un producto, reinicia los contenedores y comprueba que sigue ahí.</p>
+      <form class="new" onsubmit="crearProducto(event)">
+        <input id="n-sku" placeholder="SKU" required>
+        <input id="n-nombre" placeholder="Nombre" required>
+        <input id="n-cat" placeholder="Categoría" required>
+        <input id="n-precio" type="number" step="0.01" min="0" placeholder="Precio" required>
+        <input id="n-stock" type="number" min="0" placeholder="Stock" value="10">
+        <button class="btn" type="submit">Guardar</button>
+      </form>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+const ICONOS = { 'Televisores':'📺','Lavado':'🧺','Refrigeración':'🧊','Computo':'💻','Celulares':'📱','Cocina':'🍳' };
+const USER = (function () {
+  try {
+    let u = localStorage.getItem('userId');
+    if (!u) { u = 'cliente-' + Math.random().toString(36).slice(2, 8); localStorage.setItem('userId', u); }
+    return u;
+  } catch (e) { return 'cliente-demo'; }
+})();
+
+let productos = [], carrito = [], categoria = 'Todas';
+const money = (n) => 'S/ ' + Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const $ = (id) => document.getElementById(id);
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2400); }
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok && r.status !== 204) throw new Error('Error ' + r.status + ' en ' + path);
+  return r.status === 204 ? null : r.json();
+}
+const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+function show(name) {
+  ['tienda', 'carrito', 'ordenes', 'admin'].forEach((s) => {
+    $(s).classList.toggle('hidden', s !== name);
+    $('nav-' + s).classList.toggle('active', s === name);
+  });
+  if (name === 'carrito') cargarCarrito();
+  if (name === 'ordenes') cargarOrdenes();
+  if (name === 'admin') cargarEstado();
+}
+
+/* ---------- Catálogo ---------- */
+async function cargarProductos() {
+  try { productos = await api('/catalogo/productos'); } catch (e) {
+    $('productos').innerHTML = '<div class="empty">No se pudo cargar el catálogo. ¿Están levantados los contenedores?</div>'; return;
+  }
+  const cats = ['Todas', ...new Set(productos.map((p) => p.categoria))];
+  $('filtros').innerHTML = cats.map((c) =>
+    `<button class="chip ${c === categoria ? 'active' : ''}" onclick="filtrar('${esc(c)}')">${esc(c)}</button>`).join('');
+  const lista = productos.filter((p) => categoria === 'Todas' || p.categoria === categoria);
+  $('productos').innerHTML = lista.length ? lista.map((p) => `
+    <article class="prod">
+      <div class="pic">${ICONOS[p.categoria] || '🛍️'}</div>
+      <span class="cat">${esc(p.categoria)}</span>
+      <h3>${esc(p.nombre)}</h3>
+      <div class="price">${money(p.precio)}</div>
+      <div class="stock">${p.stock > 0 ? p.stock + ' disponibles' : 'Sin stock'} · ${esc(p.sku)}</div>
+      <button class="btn" ${p.stock > 0 ? '' : 'disabled'} onclick="agregar(${p.id})">Agregar al carrito</button>
+    </article>`).join('') : '<div class="empty">No hay productos en esta categoría.</div>';
+}
+function filtrar(c) { categoria = c; cargarProductos(); }
+
+/* ---------- Carrito ---------- */
+async function agregar(id) {
+  const p = productos.find((x) => x.id === id);
+  const actual = carrito.find((i) => i.sku === p.sku);
+  try {
+    await api(`/carrito/${USER}/items`, json('POST', {
+      sku: p.sku, nombre: p.nombre, precio: Number(p.precio), cantidad: actual ? actual.cantidad + 1 : 1 }));
+    toast('Agregado: ' + p.nombre);
+    await cargarCarrito(false);
+  } catch (e) { toast('No se pudo agregar al carrito'); }
+}
+async function cargarCarrito(render = true) {
+  try { carrito = await api(`/carrito/${USER}`); } catch (e) { carrito = []; }
+  $('cnt').textContent = carrito.reduce((a, i) => a + i.cantidad, 0);
+  if (!render) return;
+  if (!carrito.length) { $('carrito-body').innerHTML = '<div class="empty">Tu carrito está vacío.</div>'; return; }
+  const total = carrito.reduce((a, i) => a + i.precio * i.cantidad, 0);
+  $('carrito-body').innerHTML = `
+    <table><thead><tr><th>Producto</th><th class="num">Precio</th><th class="num">Cantidad</th><th class="num">Subtotal</th><th></th></tr></thead>
+    <tbody>${carrito.map((i) => `<tr><td>${esc(i.nombre)}<br><small style="color:var(--muted)">${esc(i.sku)}</small></td>
+      <td class="num">${money(i.precio)}</td>
+      <td class="num"><span class="qty"><button class="btn sec sm" onclick="cambiar('${esc(i.sku)}',-1)">−</button>${i.cantidad}<button class="btn sec sm" onclick="cambiar('${esc(i.sku)}',1)">+</button></span></td>
+      <td class="num">${money(i.precio * i.cantidad)}</td>
+      <td class="num"><button class="btn sec sm" onclick="quitar('${esc(i.sku)}')">Quitar</button></td></tr>`).join('')}</tbody></table>
+    <div class="total"><span>Total</span><span>${money(total)}</span></div>
+    <div style="margin-top:14px;text-align:right"><button class="btn" onclick="pagar()">Finalizar compra y pagar</button></div>`;
+}
+async function cambiar(sku, d) {
+  const i = carrito.find((x) => x.sku === sku); const n = i.cantidad + d;
+  if (n <= 0) return quitar(sku);
+  await api(`/carrito/${USER}/items`, json('POST', { ...i, cantidad: n }));
+  cargarCarrito();
+}
+async function quitar(sku) { await api(`/carrito/${USER}/items/${encodeURIComponent(sku)}`, { method: 'DELETE' }); cargarCarrito(); }
+
+/* ---------- Órdenes y pago ---------- */
+async function pagar() {
+  try {
+    const o = await api('/ordenes/', json('POST', { userId: USER,
+      items: carrito.map((i) => ({ sku: i.sku, cantidad: i.cantidad, precio: i.precio })) }));
+    await api(`/carrito/${USER}`, { method: 'DELETE' });
+    toast(o.estado === 'PAGADA' ? `Orden #${o.id} pagada ✔` : `Orden #${o.id}: el pago fue rechazado`);
+    await cargarCarrito(false); show('ordenes');
+  } catch (e) { toast('No se pudo crear la orden'); }
+}
+async function cargarOrdenes() {
+  let lista = [];
+  try { lista = await api('/ordenes/?userId=' + encodeURIComponent(USER)); } catch (e) {}
+  $('ordenes-body').innerHTML = lista.length ? `
+    <table><thead><tr><th>N.°</th><th>Fecha</th><th class="num">Total</th><th>Estado</th></tr></thead>
+    <tbody>${lista.map((o) => `<tr><td>#${o.id}</td><td>${new Date(o.creada_en).toLocaleString('es-PE')}</td>
+      <td class="num">${money(o.total)}</td><td><span class="state ${esc(o.estado)}">${esc(o.estado.replace('_', ' '))}</span></td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">Aún no tienes órdenes.</div>';
+}
+
+/* ---------- Estado de servicios y alta de productos ---------- */
+async function cargarEstado() {
+  const servicios = [['Gateway', '/health', true], ['Catálogo', '/api/catalogo/health'], ['Carrito', '/api/carrito/health'],
+                     ['Órdenes', '/api/ordenes/health'], ['Pagos', '/api/pagos/health']];
+  $('estado').innerHTML = servicios.map(([n]) => `<span class="dot"><i id="d-${n}"></i>${n}</span>`).join('');
+  for (const [n, url] of servicios) {
+    try { const r = await fetch(url); $('d-' + n).className = r.ok ? 'up' : 'down'; }
+    catch (e) { $('d-' + n).className = 'down'; }
+  }
+}
+async function crearProducto(ev) {
+  ev.preventDefault();
+  try {
+    await api('/catalogo/productos', json('POST', { sku: $('n-sku').value, nombre: $('n-nombre').value,
+      categoria: $('n-cat').value, precio: Number($('n-precio').value), stock: Number($('n-stock').value || 0) }));
+    ev.target.reset(); toast('Producto guardado'); cargarProductos();
+  } catch (e) { toast('No se pudo guardar (¿SKU repetido?)'); }
+}
+
+cargarProductos(); cargarCarrito(false);
+</script>
+</body>
+</html>

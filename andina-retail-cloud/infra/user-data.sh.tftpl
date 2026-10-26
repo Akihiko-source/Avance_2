@@ -1,0 +1,60 @@
+#!/bin/bash
+# user-data de vm-app-01 / vm-app-02 (Ubuntu 24.04)
+set -euxo pipefail
+exec > >(tee /var/log/retail-bootstrap.log) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y docker.io docker-compose-v2 postgresql-client unzip curl
+systemctl enable --now docker
+usermod -aG docker ubuntu
+
+# AWS CLI v2
+curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install || true
+
+mkdir -p /opt/retail
+cat > /opt/retail/docker-compose.yml <<'COMPOSE_EOF'
+${compose_yml}
+COMPOSE_EOF
+
+# Script de (re)arranque: lee el secreto de Parameter Store y levanta los servicios
+cat > /opt/retail/start.sh <<'START_EOF'
+#!/bin/bash
+set -euo pipefail
+cd /opt/retail
+REGION=${region}
+DB_PASSWORD=$(aws ssm get-parameter --name /andina/db/password --with-decryption \
+  --query Parameter.Value --output text --region $REGION)
+
+install -m 600 /dev/null .env
+cat > .env <<ENV_EOF
+REGISTRY=${registry}
+TAG=${tag}
+AWS_REGION=${region}
+DB_HOST=${db_host}
+DB_PORT=5432
+DB_USER=${db_user}
+DB_PASSWORD=$DB_PASSWORD
+DB_SSL=require
+S3_BUCKET=${bucket}
+ENV_EOF
+chmod 600 .env
+
+# Crea las bases adicionales (la inicial "catalogo" la crea RDS)
+for db in ordenes pagos; do
+  PGPASSWORD="$DB_PASSWORD" psql "host=${db_host} user=${db_user} dbname=catalogo sslmode=require" \
+    -tc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 || \
+  PGPASSWORD="$DB_PASSWORD" psql "host=${db_host} user=${db_user} dbname=catalogo sslmode=require" \
+    -c "CREATE DATABASE $db"
+done
+
+aws ecr get-login-password --region $REGION | \
+  docker login --username AWS --password-stdin ${registry}
+docker compose pull
+docker compose up -d --no-build
+START_EOF
+chmod 700 /opt/retail/start.sh
+
+# Si las imágenes aún no están en ECR, el arranque se puede repetir luego con SSM
+/opt/retail/start.sh || echo "Arranque diferido: publicar imagenes en ECR y ejecutar /opt/retail/start.sh"

@@ -1,0 +1,3 @@
+# Copiar a terraform.tfvars (NO se sube al repositorio)
+db_password  = "UnaClaveLarga_2026!"
+use_lab_role = true
